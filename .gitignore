@@ -1,0 +1,47 @@
+# --------------------
+# Python
+# --------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# --------------------
+# Virtual env
+# --------------------
+venv/
+.env
+
+# --------------------
+# Backend temp storage
+# --------------------
+auth/buffer/
+auth/temp/
+auth/uploads/
+
+# --------------------
+# Uploaded certificates
+# --------------------
+*.pdf
+*.png
+*.jpg
+*.jpeg
+
+# --------------------
+# IDE
+# --------------------
+.vscode/
+.idea/
+
+# --------------------
+# OS junk
+# --------------------
+.DS_Store
+Thumbs.db
+
+# --------------------
+# Test caches
+# --------------------
+.pytest_cache/
+.mypy_cache/
+
