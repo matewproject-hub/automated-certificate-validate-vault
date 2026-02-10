@@ -1,5 +1,6 @@
 import pytesseract
 from PIL import Image
+import numpy as np
 
 def font_check(image):
 
@@ -7,11 +8,18 @@ def font_check(image):
 
     heights = [h for h in data["height"] if h > 0]
 
-    if not heights:
-        return 0.5
+    if len(heights) < 10:
+        return 0.7   # assume okay if OCR weak
 
-    variation = max(heights) - min(heights)
+    heights = np.array(heights)
 
-    score = 1 - (variation / max(heights))
+    mean = heights.mean()
+    std = heights.std()
 
-    return max(0, min(score, 1))
+    # coefficient of variation
+    cv = std / mean
+
+    # certificates usually between 0.3–0.7
+    score = 1 - min(cv / 1.2, 1)
+
+    return max(0.5, min(score, 1))
