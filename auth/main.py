@@ -41,7 +41,6 @@ async def verify_certificate(file: UploadFile = File(...)):
         print("LAYOUT SCORE:", layout)
         print("NOISE:", noise)
         print("FONT:", font)
-        print("LAYOUT:", layout)
 
 
 
