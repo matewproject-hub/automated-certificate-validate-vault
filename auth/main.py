@@ -17,6 +17,11 @@ BUFFER = os.path.join(BASE_DIR, "buffer")
 
 os.makedirs(BUFFER, exist_ok=True)
 
+@app.get("/")
+def root():
+    print("Started")
+    return {"message":"Backend started"}
+
 
 @app.post("/verify")
 async def verify_certificate(file: UploadFile = File(...)):
