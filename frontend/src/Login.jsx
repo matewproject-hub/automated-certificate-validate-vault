@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
@@ -9,6 +9,7 @@ const Login = () => {
         name: '',
         email: '',
         password: '',
+        regNo: '',
         branch: 'CSE'
     });
 
@@ -119,20 +120,34 @@ const Login = () => {
                     </div>
 
                     {!isLogin && role === 'student' && (
-                        <div className="form-group">
-                            <label className="form-label">Branch</label>
-                            <select
-                                name="branch"
-                                className="form-select"
-                                value={formData.branch}
-                                onChange={handleChange}
-                            >
-                                <option value="CSE">CSE</option>
-                                <option value="ECE">ECE</option>
-                                <option value="ME">ME</option>
-                                <option value="CE">CE</option>
-                            </select>
-                        </div>
+                        <>
+                            <div className="form-group">
+                                <label className="form-label">Register Number</label>
+                                <input
+                                    type="text"
+                                    name="regNo"
+                                    className="form-input"
+                                    value={formData.regNo}
+                                    onChange={handleChange}
+                                    placeholder="e.g. MGP23CS142"
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Branch</label>
+                                <select
+                                    name="branch"
+                                    className="form-select"
+                                    value={formData.branch}
+                                    onChange={handleChange}
+                                >
+                                    <option value="CSE">CSE</option>
+                                    <option value="ECE">ECE</option>
+                                    <option value="ME">ME</option>
+                                    <option value="CE">CE</option>
+                                </select>
+                            </div>
+                        </>
                     )}
 
                     <button type="submit" className="btn btn-primary btn-block" style={{ marginTop: '1rem' }}>

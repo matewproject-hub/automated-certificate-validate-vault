@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StatusPage from './StatusPage';
 
@@ -7,13 +7,13 @@ const StudentDashboard = () => {
     const [activeTab, setActiveTab] = useState('home');
 
     // Mock Data
-    const [certificates, setCertificates] = useState([
+    const [certificates] = useState([
         { id: 1, name: 'Intro to AI', type: 'NPTEL', status: 'Verified', points: 20 },
         { id: 2, name: 'Python Bootcamp', type: 'Coursera', status: 'Pending', points: 0 },
         { id: 3, name: 'Inter-College Football', type: 'Sports', status: 'Rejected', points: 0 },
     ]);
 
-    const totalPoints = certificates.reduce((acc, curr) => acc + (curr.status === 'Verified' ? curr.points : 0), 0);
+    const totalPoints = useMemo(() => certificates.reduce((acc, curr) => acc + (curr.status === 'Verified' ? curr.points : 0), 0), [certificates]);
 
     const handleLogout = () => {
         navigate('/login');
@@ -78,7 +78,7 @@ const StudentDashboard = () => {
         }
     };
 
-    const buttonsRender = (cert) => {
+    const buttonsRender = () => {
         // Just a placeholder for potential future buttons
         return null;
     }
