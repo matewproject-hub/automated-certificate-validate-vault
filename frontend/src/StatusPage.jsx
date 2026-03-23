@@ -1,4 +1,4 @@
-// React import removed due to unused
+import React from 'react';
 
 const StatusPage = ({ certificates, readOnly }) => {
     const handleView = (cert) => {

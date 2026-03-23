@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthContext';
+import { mockUsers } from './users';
+
 
 const Login = () => {
     const navigate = useNavigate();
+    const { login } = useAuth();
     const [isLogin, setIsLogin] = useState(true);
     const [role, setRole] = useState('student');
     const [formData, setFormData] = useState({
@@ -24,17 +28,32 @@ const Login = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (isLogin) {
-            console.log('Logging in as', role, formData);
-            if (role === 'student') {
-                navigate('/student');
+            // Find matching user by email, password, and selected role
+            const user = mockUsers.find(
+                (u) => u.email === formData.email &&
+                    u.password === formData.password &&
+                    u.role === role
+            );
+            if (user) {
+                // Valid: Set auth state and redirect
+                login({ email: formData.email, role });
+                if (role === 'student') {
+                    navigate('/student');
+                } else {
+                    navigate('/admin');
+                }
             } else {
-                navigate('/admin');
+                // Invalid credentials/role mismatch
+                alert('Invalid email, password, or role');
+                return;  // Stop execution
             }
         } else {
+            // Registration unchanged (mock for now)
             console.log('Registering user', formData);
-            setIsLogin(true); // Switch to login after registration
+            setIsLogin(true);
         }
     };
+
 
     return (
         <div className="auth-container fade-in">

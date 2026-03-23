@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StatusPage from './StatusPage';
+import { useAuth } from './AuthContext';
 
-// 🔥 Function to parse register number
+
+
 function parseRegisterNumber(regNo) {
     const year = parseInt(regNo.substring(3, 5)); // 23
     const dept = regNo.substring(5, 7); // CS
@@ -24,14 +26,14 @@ function parseRegisterNumber(regNo) {
     };
 }
 
-// 🔥 Updated student data with register numbers
+
 const studentsMock = [
     { id: 101, name: 'Alice Johnson', reg: 'MGP23CS142', points: 45 },
     { id: 102, name: 'Bob Smith', reg: 'MGP22EC101', points: 30 },
     { id: 103, name: 'Charlie Brown', reg: 'MGP21ME055', points: 60 },
 ];
 
-// 🔥 Process students (extract batch + dept)
+
 const processedStudents = studentsMock.map((s) => {
     const info = parseRegisterNumber(s.reg);
     return { ...s, ...info };
@@ -51,10 +53,13 @@ const AdminDashboard = () => {
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
 
+    const { logout } = useAuth();
+
     const handleLogout = () => {
-        localStorage.clear();
+        logout();
         navigate('/login');
     };
+
 
     const handleBatchClick = (batch) => {
         setSelectedBatch(batch);

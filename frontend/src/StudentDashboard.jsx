@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StatusPage from './StatusPage';
+import { useAuth } from './AuthContext';
+
 
 const StudentDashboard = () => {
     const navigate = useNavigate();
@@ -15,9 +17,13 @@ const StudentDashboard = () => {
 
     const totalPoints = useMemo(() => certificates.reduce((acc, curr) => acc + (curr.status === 'Verified' ? curr.points : 0), 0), [certificates]);
 
+    const { logout } = useAuth();
+
     const handleLogout = () => {
+        logout();
         navigate('/login');
     };
+
 
     const renderContent = () => {
         switch (activeTab) {
