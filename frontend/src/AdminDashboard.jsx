@@ -27,11 +27,7 @@ function parseRegisterNumber(regNo) {
 }
 
 
-const studentsMock = [
-    { id: 101, name: 'Alice Johnson', reg: 'MGP23CS142', points: 45 },
-    { id: 102, name: 'Bob Smith', reg: 'MGP22EC101', points: 30 },
-    { id: 103, name: 'Charlie Brown', reg: 'MGP21ME055', points: 60 },
-];
+const studentsMock = [];
 
 
 const processedStudents = studentsMock.map((s) => {
@@ -41,10 +37,7 @@ const processedStudents = studentsMock.map((s) => {
 
 const batches = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
 
-const studentCertificatesMock = [
-    { id: 1, name: 'Machine Learning', type: 'Coursera', status: 'Verified', points: 20 },
-    { id: 2, name: 'Data Science', type: 'NPTEL', status: 'Pending', points: 0 },
-];
+const studentCertificatesMock = [];
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
