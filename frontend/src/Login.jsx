@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-import { mockUsers } from './users';
-
+import axios from 'axios';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -16,6 +15,7 @@ const Login = () => {
         regNo: '',
         branch: 'CSE'
     });
+    const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -25,36 +25,36 @@ const Login = () => {
         setRole(e.target.value);
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (isLogin) {
-            // Find matching user by email, password, and selected role
-            const user = mockUsers.find(
-                (u) => u.email === formData.email &&
-                    u.password === formData.password &&
-                    u.role === role
-            );
-            if (user) {
-                // Valid: Set auth state and redirect
-                login({ email: formData.email, role });
+        setLoading(true);
+        try {
+            if (isLogin) {
+                // Login API call
+                const response = await axios.post('/api/login', {
+                    email: formData.email.trim(),
+                    password: formData.password,
+                    role
+                });
+                login(response.data); // Calls AuthContext login
                 if (role === 'student') {
                     navigate('/student');
                 } else {
                     navigate('/admin');
                 }
             } else {
-                // Invalid credentials/role mismatch
-                alert('Invalid email, password, or role');
-                return;  // Stop execution
+                // Register API call
+                await axios.post('/api/register', formData);
+                alert('Registered! Please login.');
+                setIsLogin(true);
+                return;
             }
-        } else {
-            // Registration unchanged (mock for now)
-            console.log('Registering user', formData);
-            setIsLogin(true);
+        } catch (error) {
+            alert(error.response?.data?.message || 'Error occurred');
+        } finally {
+            setLoading(false);
         }
     };
-
-
     return (
         <div className="auth-container fade-in">
             <div className="auth-card card">
@@ -73,7 +73,7 @@ const Login = () => {
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} autoComplete="off">
                     {!isLogin && (
                         <div className="form-group">
                             <label className="form-label">Full Name</label>
@@ -83,6 +83,9 @@ const Login = () => {
                                 className="form-input"
                                 value={formData.name}
                                 onChange={handleChange}
+                                autoComplete="off"
+                                readOnly
+                                onFocus={(e) => e.target.removeAttribute('readonly')}
                                 required
                             />
                         </div>
@@ -96,6 +99,9 @@ const Login = () => {
                             className="form-input"
                             value={formData.email}
                             onChange={handleChange}
+                            autoComplete="off"
+                            readOnly
+                            onFocus={(e) => e.target.removeAttribute('readonly')}
                             required
                         />
                     </div>
@@ -108,6 +114,9 @@ const Login = () => {
                             className="form-input"
                             value={formData.password}
                             onChange={handleChange}
+                            autoComplete="new-password"
+                            readOnly
+                            onFocus={(e) => e.target.removeAttribute('readonly')}
                             required
                         />
                     </div>
@@ -149,6 +158,9 @@ const Login = () => {
                                     value={formData.regNo}
                                     onChange={handleChange}
                                     placeholder="e.g. MGP23CS142"
+                                    autoComplete="off"
+                                    readOnly
+                                    onFocus={(e) => e.target.removeAttribute('readonly')}
                                     required
                                 />
                             </div>
@@ -169,8 +181,8 @@ const Login = () => {
                         </>
                     )}
 
-                    <button type="submit" className="btn btn-primary btn-block" style={{ marginTop: '1rem' }}>
-                        {isLogin ? 'Login' : 'Register'}
+                    <button type="submit" className="btn btn-primary btn-block" style={{ marginTop: '1rem' }} disabled={loading}>
+                        {loading ? 'Processing...' : (isLogin ? 'Login' : 'Register')}
                     </button>
                 </form>
             </div>
