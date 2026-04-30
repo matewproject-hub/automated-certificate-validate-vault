@@ -38,8 +38,8 @@ Points are automatically assigned based on the detected or selected certificate 
 
 | Category | Awarded Points | Max Limit |
 | :--- | :---: | :--- |
-| **Coursera** | 50 | 1 |
-| **NPTEL** | 15 | 1 |
+| **Coursera** | 50 | - |
+| **NPTEL** | 50 | 1 |
 | **Internship** | 15 | - |
 | **Workshop** | 10 | - |
 | **Sports** | 10 | - |

@@ -211,16 +211,16 @@ async def verify_certificate(
 
         confidence = round((0.4 * noise + 0.3 * font + 0.3 * layout) * 100, 2)
         
-        # ── Duplication Constraint (NPTEL & Coursera) ────────────────────────
-        if category in ["NPTEL", "COURSERA"]:
+        # ── Duplication Constraint (NPTEL only) ─────────────────────────────
+        if category == "NPTEL":
             existing = supabase.table("certificates").select("id")\
                 .eq("student_id", student_id)\
-                .eq("category", category)\
+                .eq("category", "NPTEL")\
                 .execute()
             if existing.data:
                 raise HTTPException(
                     status_code=400, 
-                    detail=f"You have already uploaded a {category} certificate. Only one is allowed per user."
+                    detail="You have already uploaded an NPTEL certificate. Only one is allowed per user."
                 )
 
         # If name doesn't match, we reject regardless of other scores
