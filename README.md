@@ -13,6 +13,41 @@ AUTOCRED VAULT is an advanced verification system designed for academic institut
 - **Structural Matching**: Uses ORB (Oriented FAST and Rotated BRIEF) feature matching to verify certificate layouts against official templates.
 - **OCR Integration**: Powered by Tesseract to extract and classify certificate data.
 
+---
+
+## 🔄 System Workflow
+
+1.  **Student Registration**: A student registers with their `@saintgits.org` or `@gmail.com` email and a valid `MGP` register number.
+2.  **Certificate Upload**: The student selects a category and uploads a PDF certificate.
+3.  **Real-Time Processing**:
+    *   **Preprocessing**: Converts PDF to optimized 150 DPI images.
+    *   **Analysis**: Runs computer vision checks for noise, font, and layout structure.
+    *   **Identity Check**: OCR extracts the name and matches it against the student's registered profile.
+    *   **Constraint Check**: Validates that it's not a duplicate upload for restricted categories (e.g., NPTEL).
+4.  **Result & Archiving**:
+    *   Calculates a final confidence score.
+    *   If valid, uploads the PDF to **Supabase Storage** and logs the verified data to **Supabase Database**.
+    *   If invalid, marks the status as `SUSPICIOUS` or `REJECTED`.
+5.  **Admin Review**: Admins can log in to view all students, their total points, and open the original cloud-hosted certificates for final verification.
+
+---
+
+## 🏆 Activity Point Awarding
+
+Points are automatically assigned based on the detected or selected certificate category:
+
+| Category | Awarded Points | Max Limit |
+| :--- | :---: | :--- |
+| **Coursera** | 50 | 1 |
+| **NPTEL** | 15 | 1 |
+| **Internship** | 15 | - |
+| **Workshop** | 10 | - |
+| **Sports** | 10 | - |
+| **General** | 5 | - |
+
+> [!NOTE]
+> Point totals are automatically calculated on the user's dashboard after each successful verification.
+
 ### 🛡️ Smart Identity Protection
 - **Name Matching**: Automatically compares the name on the certificate with the registered user's profile.
 - **Duplication Control**: Enforces strict constraints (e.g., only one NPTEL certificate per student).
