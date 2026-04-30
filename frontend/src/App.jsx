@@ -12,7 +12,7 @@ const ProtectedRoute = ({ children, allowedRole }) => {
   return children;
 };
 
-function AppContent() {
+function App() {
   return (
     <AuthProvider>
       <Router>
@@ -35,21 +35,6 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
-        </Routes>
-      </Router>
-    </AuthProvider>
-  );
-}
-
-function App() {
-  return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/student" element={<StudentDashboard />} />
-          <Route path="/admin" element={<AdminDashboard />} />
         </Routes>
       </Router>
     </AuthProvider>

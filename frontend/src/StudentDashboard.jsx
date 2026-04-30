@@ -1,23 +1,38 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StatusPage from './StatusPage';
 import { useAuth } from './AuthContext';
 
-
 const StudentDashboard = () => {
     const navigate = useNavigate();
+    const { user, logout } = useAuth();
     const [activeTab, setActiveTab] = useState('home');
 
-    // Step 2: Set Up React State
+    // Upload state
     const [selectedFile, setSelectedFile] = useState(null);
     const [uploadLoading, setUploadLoading] = useState(false);
     const [verificationResult, setVerificationResult] = useState(null);
     const [uploadError, setUploadError] = useState(null);
 
+    // Certificates state
+    const [certificates, setCertificates] = useState([]);
+    const [certsLoading, setCertsLoading] = useState(false);
+
+    // Fetch certificates for this student on mount
+    useEffect(() => {
+        if (!user?.id) return;
+        setCertsLoading(true);
+        fetch(`/api/certificates/${user.id}`)
+            .then(res => res.json())
+            .then(data => setCertificates(Array.isArray(data) ? data : []))
+            .catch(() => setCertificates([]))
+            .finally(() => setCertsLoading(false));
+    }, [user?.id]);
+
     const handleUploadSubmit = async (e) => {
         e.preventDefault();
         if (!selectedFile) {
-            setUploadError("Please select a PDF file first.");
+            setUploadError('Please select a PDF file first.');
             return;
         }
 
@@ -27,20 +42,27 @@ const StudentDashboard = () => {
 
         const formData = new FormData();
         formData.append('file', selectedFile);
+        formData.append('student_id', user.id);
+        formData.append('file_name', selectedFile.name.replace('.pdf', ''));
 
         try {
-            const response = await fetch('http://localhost:8000/verify', {
+            const response = await fetch('/verify', {
                 method: 'POST',
                 body: formData,
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.detail || 'Verification failed');
+                const err = await response.json();
+                throw new Error(err.detail || 'Verification failed');
             }
 
             const data = await response.json();
             setVerificationResult(data);
+
+            // Refresh certificate list after successful upload
+            const certsRes = await fetch(`/api/certificates/${user.id}`);
+            const certsData = await certsRes.json();
+            setCertificates(Array.isArray(certsData) ? certsData : []);
         } catch (err) {
             setUploadError(err.message);
         } finally {
@@ -48,23 +70,25 @@ const StudentDashboard = () => {
         }
     };
 
-    const [certificates, setCertificates] = useState([]);
-
-    const totalPoints = useMemo(() => certificates.reduce((acc, curr) => acc + (curr.status === 'Verified' ? curr.points : 0), 0), [certificates]);
-
-    const { logout } = useAuth();
+    const totalPoints = useMemo(
+        () => certificates.reduce((acc, c) => acc + (c.status === 'VALID' ? (c.points || 0) : 0), 0),
+        [certificates]
+    );
 
     const handleLogout = () => {
         logout();
         navigate('/login');
     };
 
-
     const renderContent = () => {
         switch (activeTab) {
             case 'home':
                 return (
                     <div className="grid-container fade-in">
+                        {certsLoading && <p>Loading certificates...</p>}
+                        {!certsLoading && certificates.length === 0 && (
+                            <p style={{ color: 'var(--text-secondary)' }}>No certificates yet. Upload one to get started!</p>
+                        )}
                         {certificates.map((cert) => (
                             <div key={cert.id} className="card">
                                 <h3>{cert.name}</h3>
@@ -73,21 +97,27 @@ const StudentDashboard = () => {
                                     <span className={`status-badge status-${cert.status.toLowerCase()}`}>
                                         {cert.status}
                                     </span>
-                                    <span>{buttonsRender(cert)}</span>
+                                    <span style={{ fontWeight: 'bold', color: 'var(--accent-color)' }}>
+                                        {cert.points} pts
+                                    </span>
                                 </div>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                                    Confidence: {cert.confidence}%
+                                </p>
                             </div>
                         ))}
                     </div>
                 );
+
             case 'upload':
                 return (
                     <div className="card fade-in" style={{ maxWidth: '600px', margin: '0 auto' }}>
                         <h2>Upload Certificate</h2>
                         <form onSubmit={handleUploadSubmit}>
                             <div className="form-group">
-                                <label className="form-label">Certificate File (PDF)</label>
+                                <label className="form-label">Certificate File (PDF only)</label>
                                 <div className="upload-area" style={{ position: 'relative' }}>
-                                    <p>{selectedFile ? selectedFile.name : "Click or Drag to Upload PDF"}</p>
+                                    <p>{selectedFile ? selectedFile.name : 'Click or Drag to Upload PDF'}</p>
                                     <input
                                         type="file"
                                         accept=".pdf"
@@ -96,17 +126,8 @@ const StudentDashboard = () => {
                                     />
                                 </div>
                             </div>
-                            <div className="form-group">
-                                <label className="form-label">Certificate Type</label>
-                                <select className="form-select">
-                                    <option value="NPTEL">NPTEL</option>
-                                    <option value="Coursera">Coursera</option>
-                                    <option value="Sports">Sports</option>
-                                    <option value="Fest">Fest</option>
-                                </select>
-                            </div>
                             <button type="submit" className="btn btn-primary btn-block" disabled={uploadLoading}>
-                                {uploadLoading ? 'Verifying...' : 'Upload'}
+                                {uploadLoading ? '⏳ Verifying...' : '🚀 Upload & Verify'}
                             </button>
                         </form>
 
@@ -118,48 +139,63 @@ const StudentDashboard = () => {
 
                         {verificationResult && (
                             <div style={{ marginTop: '1.5rem', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
-                                <h3 style={{ marginBottom: '1rem' }}>Verification Result</h3>
-                                <p><strong>Status:</strong> <span className={`status-badge status-${verificationResult.status.toLowerCase()}`}>{verificationResult.status}</span></p>
-
+                                <h3 style={{ marginBottom: '1rem' }}>✅ Verification Result</h3>
+                                <p>
+                                    <strong>Status: </strong>
+                                    <span className={`status-badge status-${verificationResult.status.toLowerCase()}`}>
+                                        {verificationResult.status}
+                                    </span>
+                                </p>
+                                <p><strong>Type:</strong> {verificationResult.category}</p>
+                                <p><strong>Confidence:</strong> {verificationResult.confidence}%</p>
+                                <p><strong>Points Awarded:</strong> {verificationResult.points}</p>
                             </div>
                         )}
                     </div>
                 );
+
             case 'status':
                 return <StatusPage certificates={certificates} />;
+
             case 'points':
                 return (
                     <div className="card fade-in points-display">
                         <div className="points-value">{totalPoints}</div>
                         <div className="points-label">Total Activity Points</div>
+                        <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+                            From {certificates.filter(c => c.status === 'VALID').length} verified certificate(s)
+                        </p>
                     </div>
                 );
+
             default:
-                return <div>Select a tab</div>;
+                return null;
         }
     };
-
-    const buttonsRender = () => {
-        // Just a placeholder for potential future buttons
-        return null;
-    }
 
     return (
         <div>
             <nav className="dashboard-nav">
                 <div className="nav-brand">AUTOCRED VAULT</div>
                 <div className="nav-links">
-                    <button className={`nav-link ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}>Home</button>
-                    <button className={`nav-link ${activeTab === 'upload' ? 'active' : ''}`} onClick={() => setActiveTab('upload')}>Upload</button>
-                    <button className={`nav-link ${activeTab === 'status' ? 'active' : ''}`} onClick={() => setActiveTab('status')}>Status</button>
-                    <button className={`nav-link ${activeTab === 'points' ? 'active' : ''}`} onClick={() => setActiveTab('points')}>Total Points</button>
-                    <button className="nav-link" onClick={handleLogout} style={{ color: 'var(--warning-color)' }}>Logout</button>
+                    {['home', 'upload', 'status', 'points'].map(tab => (
+                        <button
+                            key={tab}
+                            className={`nav-link ${activeTab === tab ? 'active' : ''}`}
+                            onClick={() => setActiveTab(tab)}
+                        >
+                            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                        </button>
+                    ))}
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                        {user?.name}
+                    </span>
+                    <button className="nav-link" onClick={handleLogout} style={{ color: 'var(--warning-color)' }}>
+                        Logout
+                    </button>
                 </div>
             </nav>
-
-            <div className="container">
-                {renderContent()}
-            </div>
+            <div className="container">{renderContent()}</div>
         </div>
     );
 };

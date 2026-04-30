@@ -2,17 +2,23 @@ import React from 'react';
 
 const StatusPage = ({ certificates, readOnly }) => {
     const handleView = (cert) => {
-        // TEMP: open static file
-        // Later replace with backend URL (cert.file_url)
-        const fileUrl = cert.file_url || "/sample.pdf";
+        const fileUrl = cert.file_url;
+        if (!fileUrl) {
+            alert("No file URL available for this certificate.");
+            return;
+        }
         window.open(fileUrl, "_blank");
     };
 
     const handleDownload = (cert) => {
-        const fileUrl = cert.file_url || "/sample.pdf";
+        const fileUrl = cert.file_url;
+        if (!fileUrl) {
+            alert("No file URL available for this certificate.");
+            return;
+        }
         const link = document.createElement('a');
         link.href = fileUrl;
-        link.download = cert.name + ".pdf";
+        link.download = (cert.name || 'certificate') + ".pdf";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

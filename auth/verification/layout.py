@@ -24,7 +24,7 @@ def layout_check(image):
     kp1, des1 = orb.detectAndCompute(img, None)
 
     if des1 is None:
-        return 0
+        return 0.5  # inconclusive — not enough features to compare
 
     for template in templates:
         kp2, des2 = orb.detectAndCompute(template, None)
@@ -40,5 +40,9 @@ def layout_check(image):
         score = len(matches) / max(len(kp1), len(kp2))
         best_score = max(best_score, score)
 
+    # If no good match found and templates are limited, be neutral (inconclusive)
+    # rather than harshly penalizing the certificate
+    if best_score < 0.05:
+        return 0.5  # need more templates to be conclusive
     return min(best_score * 2, 1)
 

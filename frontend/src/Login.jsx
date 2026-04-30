@@ -44,7 +44,7 @@ const Login = () => {
                 }
             } else {
                 // Register API call
-                await axios.post('/api/register', formData);
+                await axios.post('/api/register', { ...formData, role });
                 alert('Registered! Please login.');
                 setIsLogin(true);
                 return;

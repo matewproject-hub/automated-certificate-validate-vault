@@ -1,67 +1,76 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StatusPage from './StatusPage';
 import { useAuth } from './AuthContext';
 
-
-
-function parseRegisterNumber(regNo) {
-    const year = parseInt(regNo.substring(3, 5)); // 23
-    const dept = regNo.substring(5, 7); // CS
-
+function parseRegisterNumber(regNo = '') {
+    if (!regNo || regNo.length < 7) return { yearGroup: 'Unknown', dept: '?', batch: '?' };
+    const year = parseInt(regNo.substring(3, 5));
+    const dept = regNo.substring(5, 7);
     const currentYear = new Date().getFullYear() % 100;
     const academicYear = currentYear - year + 1;
-
-    let yearGroup = "";
-
-    if (academicYear === 1) yearGroup = "1st Year";
-    else if (academicYear === 2) yearGroup = "2nd Year";
-    else if (academicYear === 3) yearGroup = "3rd Year";
-    else if (academicYear === 4) yearGroup = "4th Year";
-
-    return {
-        yearGroup,
-        dept,
-        batch: `20${year}-20${year + 4}`,
-    };
+    const yearGroup =
+        academicYear === 1 ? '1st Year' :
+        academicYear === 2 ? '2nd Year' :
+        academicYear === 3 ? '3rd Year' :
+        academicYear === 4 ? '4th Year' : 'Alumni';
+    return { yearGroup, dept, batch: `20${year}-20${year + 4}` };
 }
-
-
-const studentsMock = [];
-
-
-const processedStudents = studentsMock.map((s) => {
-    const info = parseRegisterNumber(s.reg);
-    return { ...s, ...info };
-});
 
 const batches = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
 
-const studentCertificatesMock = [];
-
 const AdminDashboard = () => {
     const navigate = useNavigate();
+    const { logout } = useAuth();
+
     const [view, setView] = useState('batches');
     const [selectedBatch, setSelectedBatch] = useState(null);
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
 
-    const { logout } = useAuth();
+    const [students, setStudents] = useState([]);
+    const [studentCerts, setStudentCerts] = useState([]);
+    const [loading, setLoading] = useState(false);
 
-    const handleLogout = () => {
-        logout();
-        navigate('/login');
-    };
+    // Fetch all students once
+    useEffect(() => {
+        setLoading(true);
+        fetch('/api/students')
+            .then(res => res.json())
+            .then(data => setStudents(Array.isArray(data) ? data : []))
+            .catch(() => setStudents([]))
+            .finally(() => setLoading(false));
+    }, []);
 
+    const processedStudents = useMemo(() =>
+        students.map(s => ({ ...s, ...parseRegisterNumber(s.regNo) })),
+        [students]
+    );
+
+    const filteredStudents = useMemo(() =>
+        processedStudents.filter(s =>
+            s.yearGroup === selectedBatch &&
+            (s.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+        ),
+        [processedStudents, selectedBatch, searchQuery]
+    );
 
     const handleBatchClick = (batch) => {
         setSelectedBatch(batch);
         setView('list');
     };
 
-    const handleStudentClick = (student) => {
+    const handleStudentClick = async (student) => {
         setSelectedStudent(student);
+        setStudentCerts([]);
         setView('student');
+        try {
+            const res = await fetch(`/api/certificates/${student.id}`);
+            const data = await res.json();
+            setStudentCerts(Array.isArray(data) ? data : []);
+        } catch {
+            setStudentCerts([]);
+        }
     };
 
     const handleBack = () => {
@@ -69,11 +78,10 @@ const AdminDashboard = () => {
         else if (view === 'list') setView('batches');
     };
 
-    // 🔥 Filter based on batch + search
-    const filteredStudents = useMemo(() => processedStudents.filter(s =>
-        s.yearGroup === selectedBatch &&
-        s.name.toLowerCase().includes(searchQuery.toLowerCase())
-    ), [selectedBatch, searchQuery]);
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
 
     return (
         <div>
@@ -93,16 +101,22 @@ const AdminDashboard = () => {
                 {view === 'batches' && (
                     <>
                         <h2 style={{ marginBottom: '1.5rem' }}>Select Batch</h2>
+                        {loading && <p>Loading students...</p>}
                         <div className="grid-container">
-                            {batches.map((batch) => (
-                                <div
-                                    key={batch}
-                                    className="card batch-card"
-                                    onClick={() => handleBatchClick(batch)}
-                                >
-                                    <h3>{batch}</h3>
-                                </div>
-                            ))}
+                            {batches.map((batch) => {
+                                const count = processedStudents.filter(s => s.yearGroup === batch).length;
+                                return (
+                                    <div
+                                        key={batch}
+                                        className="card batch-card"
+                                        onClick={() => handleBatchClick(batch)}
+                                        style={{ cursor: 'pointer' }}
+                                    >
+                                        <h3>{batch}</h3>
+                                        <p style={{ color: 'var(--text-secondary)' }}>{count} student{count !== 1 ? 's' : ''}</p>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </>
                 )}
@@ -110,7 +124,6 @@ const AdminDashboard = () => {
                 {view === 'list' && (
                     <>
                         <h2 style={{ marginBottom: '1.5rem' }}>{selectedBatch} Students</h2>
-
                         <div className="search-bar">
                             <input
                                 type="text"
@@ -120,7 +133,6 @@ const AdminDashboard = () => {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
-
                         <div className="grid-container">
                             {filteredStudents.map((student) => (
                                 <div
@@ -130,26 +142,11 @@ const AdminDashboard = () => {
                                     style={{ cursor: 'pointer' }}
                                 >
                                     <h3>{student.name}</h3>
-                                    <p style={{ color: 'var(--text-secondary)', fontWeight: 'bold' }}>
-                                        {student.reg}
-                                    </p>
-                                    <p style={{ color: 'var(--text-secondary)' }}>
-                                        {student.dept}
-                                    </p>
-                                    <p style={{ color: 'var(--text-secondary)' }}>
-                                        {student.batch}
-                                    </p>
-
-                                    <div style={{
-                                        marginTop: '1rem',
-                                        fontWeight: 'bold',
-                                        color: 'var(--accent-color)'
-                                    }}>
-                                        {student.points} Points
-                                    </div>
+                                    <p style={{ color: 'var(--text-secondary)', fontWeight: 'bold' }}>{student.regNo}</p>
+                                    <p style={{ color: 'var(--text-secondary)' }}>{student.dept} · {student.batch}</p>
+                                    <p style={{ color: 'var(--text-secondary)' }}>{student.branch}</p>
                                 </div>
                             ))}
-
                             {filteredStudents.length === 0 && <p>No students found.</p>}
                         </div>
                     </>
@@ -160,11 +157,10 @@ const AdminDashboard = () => {
                         <div style={{ marginBottom: '1.5rem' }}>
                             <h2>{selectedStudent.name}</h2>
                             <p style={{ color: 'var(--text-secondary)' }}>
-                                {selectedStudent.dept} - {selectedStudent.batch}
+                                {selectedStudent.dept} · {selectedStudent.batch} · {selectedStudent.regNo}
                             </p>
                         </div>
-
-                        <StatusPage certificates={studentCertificatesMock} readOnly={true} />
+                        <StatusPage certificates={studentCerts} readOnly={true} />
                     </>
                 )}
             </div>
