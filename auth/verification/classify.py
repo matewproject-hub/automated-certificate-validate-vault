@@ -24,5 +24,7 @@ def classify_certificate(image: str, ocr_data=None) -> str:
         return "WORKSHOP"
     if "sports" in text:
         return "SPORTS"
+    if "coursera" in text:
+        return "COURSERA"
 
     return "GENERAL"

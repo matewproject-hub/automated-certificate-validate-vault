@@ -43,6 +43,29 @@ const Login = () => {
                     navigate('/admin');
                 }
             } else {
+                // ── Registration Validation ───────────────────────────────────
+                const name = formData.name.trim();
+                const email = formData.email.trim().toLowerCase();
+                const regNo = formData.regNo.trim();
+
+                if (!/^[A-Za-z\s]+$/.test(name)) {
+                    alert("Name must only contain alphabets and spaces.");
+                    setLoading(false);
+                    return;
+                }
+
+                if (!(email.endsWith("@gmail.com") || email.endsWith("@saintgits.org"))) {
+                    alert("Only @gmail.com or @saintgits.org emails are allowed.");
+                    setLoading(false);
+                    return;
+                }
+
+                if (!/^MGP[A-Za-z0-9]{7}$/.test(regNo)) {
+                    alert("Register number must be in the format MGPxxxxxxx (e.g., MGP23CS142).");
+                    setLoading(false);
+                    return;
+                }
+
                 // Register API call
                 await axios.post('/api/register', { ...formData, role });
                 alert('Registered! Please login.');

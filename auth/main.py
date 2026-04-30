@@ -5,6 +5,7 @@ import bcrypt
 import shutil
 import uuid
 import os
+import re
 from datetime import datetime
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -68,8 +69,24 @@ def root():
 @app.post("/api/register")
 def register(data: RegisterModel):
     try:
+        # ── Backend Validation ──────────────────────────────────────────────
+        
+        # 1. Email Domain check
+        email = data.email.lower().strip()
+        if not (email.endswith("@gmail.com") or email.endswith("@saintgits.org")):
+            raise HTTPException(status_code=400, detail="Only @gmail.com or @saintgits.org emails are allowed.")
+
+        # 2. Name check (alphabets and spaces only)
+        if not all(c.isalpha() or c.isspace() for c in data.name):
+            raise HTTPException(status_code=400, detail="Name must only contain alphabets and spaces.")
+
+        # 3. Register Number check (MGPprefix + 7 alphanumeric)
+        # Using regex for exact pattern matching
+        if not re.match(r"^MGP[A-Za-z0-9]{7}$", data.regNo):
+            raise HTTPException(status_code=400, detail="Register number must be in the format MGPxxxxxxx (e.g., MGP23CS142).")
+
         # Check if user already exists
-        existing = supabase.table("users").select("*").eq("email", data.email).execute()
+        existing = supabase.table("users").select("*").eq("email", email).execute()
         if existing.data:
             raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -159,6 +176,12 @@ async def verify_certificate(
     pdf_path = os.path.join(BUFFER, f"{file_id}.pdf")
 
     try:
+        # ── Fetch User Name ──────────────────────────────────────────────────
+        user_res = supabase.table("users").select("name").eq("id", student_id).execute()
+        if not user_res.data:
+            raise HTTPException(status_code=404, detail="Student not found")
+        student_name = user_res.data[0].get("name", "").lower().strip()
+
         # Save file locally for processing
         content = await file.read()
         with open(pdf_path, "wb") as f:
@@ -172,8 +195,40 @@ async def verify_certificate(
         category = classify_certificate(image_path, ocr_data)
         points = map_points(category)
 
+        # ── Name Matching Logic ──────────────────────────────────────────────
+        words = [w.lower() for w in ocr_data.get("text", []) if w.strip()]
+        full_text = " ".join(words)
+        
+        name_match = False
+        if student_name in full_text:
+            name_match = True
+        else:
+            # Fallback: check if at least two words from the name appear
+            name_parts = [p for p in student_name.split() if len(p) > 2]
+            matches = sum(1 for p in name_parts if p in full_text)
+            if matches >= min(2, len(name_parts)):
+                name_match = True
+
         confidence = round((0.4 * noise + 0.3 * font + 0.3 * layout) * 100, 2)
-        status = "VALID" if confidence >= 65 else "SUSPICIOUS"
+        
+        # ── Duplication Constraint (NPTEL only) ─────────────────────────────
+        if category == "NPTEL":
+            existing_nptel = supabase.table("certificates").select("id")\
+                .eq("student_id", student_id)\
+                .eq("category", "NPTEL")\
+                .execute()
+            if existing_nptel.data:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="You have already uploaded an NPTEL certificate. Only one is allowed per user."
+                )
+
+        # If name doesn't match, we reject regardless of other scores
+        if not name_match:
+            status = "REJECTED"
+            confidence = min(confidence, 40.0) # Tank confidence if name mismatch
+        else:
+            status = "VALID" if confidence >= 65 else "SUSPICIOUS"
 
         # ── Supabase Storage ──────────────────────────────────────────────────
         storage_path = f"{student_id}/{file_id}_{file.filename}"
