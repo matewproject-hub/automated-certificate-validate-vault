@@ -1,7 +1,7 @@
 POINTS = {
     "HACKATHON": 20,
     "INTERNSHIP": 30,
-    "NPTEL": 15,
+    "NPTEL": 50,
     "WORKSHOP": 10,
     "SPORTS": 10,
     "GENERAL": 5,

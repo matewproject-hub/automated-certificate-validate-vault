@@ -191,8 +191,8 @@ async def verify_certificate(
         image_path = pdf_to_image(pdf_path)
         noise = noise_check(image_path)
         font, ocr_data = font_check(image_path)
-        layout = layout_check(image_path)
         category = classify_certificate(image_path, ocr_data)
+        layout = layout_check(image_path, category)
         points = map_points(category)
 
         # ── Name Matching Logic ──────────────────────────────────────────────
@@ -200,16 +200,22 @@ async def verify_certificate(
         full_text = " ".join(words)
         
         name_match = False
+        student_name_parts = [p for p in student_name.split() if len(p) > 2]
+        
         if student_name in full_text:
             name_match = True
         else:
-            # Fallback: check if at least two words from the name appear
-            name_parts = [p for p in student_name.split() if len(p) > 2]
-            matches = sum(1 for p in name_parts if p in full_text)
-            if matches >= min(2, len(name_parts)):
+            # Relaxed Fallback: 
+            # - For 2-word names, match at least 1 part.
+            # - For 3+ word names, match at least 2 parts.
+            matches = sum(1 for p in student_name_parts if p in full_text)
+            required_matches = 1 if len(student_name_parts) <= 2 else 2
+            
+            if matches >= min(len(student_name_parts), required_matches):
                 name_match = True
 
-        confidence = round((0.4 * noise + 0.3 * font + 0.3 * layout) * 100, 2)
+        # Balanced weights: Noise (0.35), Font (0.35), Layout (0.3)
+        confidence = round((0.35 * noise + 0.35 * font + 0.3 * layout) * 100, 2)
         
         # ── Duplication Constraint (NPTEL only) ─────────────────────────────
         if category == "NPTEL":
@@ -226,27 +232,28 @@ async def verify_certificate(
         # If name doesn't match, we reject regardless of other scores
         if not name_match:
             status = "REJECTED"
-            confidence = min(confidence, 40.0) # Tank confidence if name mismatch
+            confidence = min(confidence, 30.0) # Tank confidence even more (40 -> 30)
         else:
-            status = "VALID" if confidence >= 65 else "SUSPICIOUS"
+            status = "VALID" if confidence >= 65 else "SUSPICIOUS" # Threshold back to 65
 
-        # ── Supabase Storage ──────────────────────────────────────────────────
-        storage_path = f"{student_id}/{file_id}_{file.filename}"
-        supabase.storage.from_("certificates").upload(storage_path, content, {"content-type": "application/pdf"})
-        file_url = supabase.storage.from_("certificates").get_public_url(storage_path)
+        file_url = None
+        # ── Conditionally Persist to Supabase ─────────────────────────────────
+        if status == "VALID":
+            storage_path = f"{student_id}/{file_id}_{file.filename}"
+            supabase.storage.from_("certificates").upload(storage_path, content, {"content-type": "application/pdf"})
+            file_url = supabase.storage.from_("certificates").get_public_url(storage_path)
 
-        # ── Supabase Database ─────────────────────────────────────────────────
-        cert_data = {
-            "student_id": student_id,
-            "file_name": file_name,
-            "file_url": file_url,
-            "category": category,
-            "status": status,
-            "confidence": confidence,
-            "points": points,
-            "uploaded_at": datetime.utcnow().isoformat(),
-        }
-        supabase.table("certificates").insert(cert_data).execute()
+            cert_data = {
+                "student_id": student_id,
+                "file_name": file_name,
+                "file_url": file_url,
+                "category": category,
+                "status": status,
+                "confidence": confidence,
+                "points": points,
+                "uploaded_at": datetime.utcnow().isoformat(),
+            }
+            supabase.table("certificates").insert(cert_data).execute()
 
         return {
             "status": status,

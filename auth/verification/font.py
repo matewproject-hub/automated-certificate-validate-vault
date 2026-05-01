@@ -14,12 +14,12 @@ def font_check(image: str):
     heights = [h for h in data["height"] if h > 0]
 
     if len(heights) < 10:
-        return 0.7, data  # assume okay if OCR weak
+        return 0.3, data  # penalize if OCR is weak
 
     heights = np.array(heights)
     mean = heights.mean()
     std = heights.std()
 
     cv = std / mean  # coefficient of variation
-    score = 1 - min(cv / 1.2, 1)
-    return max(0.5, min(score, 1.0)), data
+    score = 1 - min(cv / 1.2, 1) # reverted to 1.2
+    return max(0.5, min(score, 1.0)), data # reverted floor to 0.5
