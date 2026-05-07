@@ -3,12 +3,7 @@ import numpy as np
 
 
 def noise_check(image: str) -> float:
-    """
-    Uses Laplacian variance to estimate noise/blur.
-    High variance = sharp, clean image (good certificate).
-    Low variance = blurry or heavily manipulated.
-    Returns a score between 0 and 1.
-    """
+
     img = cv2.imread(image, 0)
     if img is None:
         return 0.5

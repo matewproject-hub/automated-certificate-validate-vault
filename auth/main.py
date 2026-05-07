@@ -82,8 +82,9 @@ def register(data: RegisterModel):
 
         # 3. Register Number check (MGPprefix + 7 alphanumeric)
         # Using regex for exact pattern matching
-        if not re.match(r"^MGP[A-Za-z0-9]{7}$", data.regNo):
-            raise HTTPException(status_code=400, detail="Register number must be in the format MGPxxxxxxx (e.g., MGP23CS142).")
+        if data.role == "student":
+            if not re.match(r"^MGP[A-Za-z0-9]{7}$", data.regNo):
+                raise HTTPException(status_code=400, detail="Register number must be in the format MGPxxxxxxx (e.g., MGP23CS142).")
 
         # Check if user already exists
         existing = supabase.table("users").select("*").eq("email", email).execute()

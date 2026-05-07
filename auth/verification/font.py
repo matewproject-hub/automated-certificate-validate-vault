@@ -4,10 +4,7 @@ import numpy as np
 
 
 def font_check(image: str):
-    """
-    Returns (score, ocr_data) so the OCR result can be reused by classify.
-    Score is based on font-height consistency (coefficient of variation).
-    """
+    
     img = Image.open(image)
     data = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
 

@@ -60,7 +60,7 @@ const Login = () => {
                     return;
                 }
 
-                if (!/^MGP[A-Za-z0-9]{7}$/.test(regNo)) {
+                if (role === 'student' && !/^MGP[A-Za-z0-9]{7}$/.test(regNo)) {
                     alert("Register number must be in the format MGPxxxxxxx (e.g., MGP23CS142).");
                     setLoading(false);
                     return;
