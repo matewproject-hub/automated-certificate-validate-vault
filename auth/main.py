@@ -163,6 +163,47 @@ def get_certificates(student_id: int):
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
+@app.post("/api/debug-ocr")
+async def debug_ocr(file: UploadFile = File(...)):
+    """
+    Debug endpoint to return raw OCR data and the combined text.
+    """
+    if file.content_type != "application/pdf":
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+
+    file_id = str(uuid.uuid4())
+    pdf_path = os.path.join(BUFFER, f"{file_id}.pdf")
+
+    try:
+        # Save file locally for processing
+        content = await file.read()
+        with open(pdf_path, "wb") as f:
+            f.write(content)
+
+        # Process OCR
+        image_path = pdf_to_image(pdf_path)
+        _, ocr_data = font_check(image_path)
+        
+        # Generate full_text
+        words = [w.lower() for w in ocr_data.get("text", []) if w.strip()]
+        full_text = " ".join(words)
+
+        return {
+            "full_text": full_text,
+            "ocr_data": ocr_data
+        }
+
+    except Exception as e:
+        print(f"Error during debug OCR: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+    finally:
+        if os.path.exists(pdf_path):
+            os.remove(pdf_path)
+        if "image_path" in locals() and os.path.exists(image_path):
+            os.remove(image_path)
+
+
 # ── Verification Route ─────────────────────────────────────────────────────────
 @app.post("/verify")
 async def verify_certificate(
